@@ -11,8 +11,8 @@ describe("Events API (integration with testcontainer)", () => {
   let app: any;
   let prisma: any;
 
-  // tests/integration/events.int.spec.ts (extract)
   beforeAll(async () => {
+    // 1) Levantar Postgres efímero
     container = await new GenericContainer("postgres:15")
       .withEnvironment({
         POSTGRES_USER: "postgres",
@@ -25,25 +25,24 @@ describe("Events API (integration with testcontainer)", () => {
     const host = container.getHost();
     const port = container.getMappedPort(5432);
 
+    // 2) Apuntar Prisma a ese contenedor (runtime)
     process.env.DATABASE_URL = `postgresql://postgres:password@${host}:${port}/testdb?schema=public`;
 
-    execSync("npx prisma generate --schema=./prisma/schema.prisma", {
-      stdio: "inherit",
-      env: process.env,
-    });
-
+    // 3) Aplicar schema al DB (más rápido y seguro que migraciones en CI)
     execSync("npx prisma db push --schema=./prisma/schema.prisma", {
       stdio: "inherit",
       env: process.env,
     });
 
-    // IMPORT FROM SOURCE (no build) — import .js specifiers, jest maps to .ts
+    // 4) Importar app y prisma (desde src, usando .js specifiers — ts-jest mapeará .ts)
+    //    NO hacemos prisma generate aquí; se ejecuta una sola vez desde package.json antes de los tests.
     const modApp = await import("../../src/app.js");
     app = modApp.default;
 
     const modPrisma = await import("../../src/prisma/client.js");
     prisma = modPrisma.prisma;
 
+    // 5) ensure DB clean
     await prisma.event.deleteMany();
   });
 
@@ -98,6 +97,7 @@ describe("Events API (integration with testcontainer)", () => {
 
     await request(app).delete(`/events/${id}`).expect(204);
 
+    // We expect controller to throw -> middleware returns 500 by default (as earlier)
     await request(app).get(`/events/${id}`).expect(500);
   });
 });

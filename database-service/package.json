@@ -11,13 +11,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "lint": "eslint . --ext .ts",
-    "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --testPathPatterns=tests/unit",
-    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --testPathPatterns=tests/integration",
-    "test:smoke": "jest --runInBand --testPathPatterns=tests/smoke",
-    "test:all": "npm run test:unit && npm run test:integration && npm run test:smoke",
-    "test": "npm run test:unit",
-    "test:watch": "jest --watch --testPathPatterns=tests/unit",
-    "test:coverage": "jest --coverage"
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "npm run prisma:generate && cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --testPathPatterns=tests/unit",
+    "test:integration": "npm run prisma:generate && cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --testPathPatterns=tests/integration",
+    "test:coverage": "npm run prisma:generate && cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "keywords": [],
   "author": "",
