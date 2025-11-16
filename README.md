@@ -9,127 +9,87 @@ Pruebas de Software
 - Herbert Garrido
 - Elías Currihuil
 
-# Módulo de Notificaciones
+## Arquitectura
 
-**Responsable**: Elías  
-**Tecnología**: Python + Flask  
-**Puerto**: 5003
-
-## Descripción
-
-Servicio encargado del envío y registro de notificaciones a asistentes del evento.
-
-## Endpoints
-
-### 1. Enviar Notificación
-
-```http
-POST /api/notifications/send
-Content-Type: application/json
-
-{
-  "type": "email",  // "email" | "sms"
-  "message": "Bienvenido al evento",
-  "recipients": ["attendee_id_1", "attendee_id_2"]
-}
-
-Response 201:
-{
-  "status": "sent",
-  "notification_id": "uuid",
-  "sent_count": 2
-}
+```
+┌─────────────────────────────────────────┐
+│         PostgreSQL Database             │
+│              Puerto: 5432               │
+└────────────────┬────────────────────────┘
+                 │
+       ┌─────────┴─────────┐
+       │                   │
+┌──────▼───────┐    ┌──────▼──────────┐
+│  Database    │    │   Notifications │
+│   Service    │◄───┤    Service      │
+│  (Node.js)   │    │   (Python)      │
+│  Puerto:3000 │    │   Puerto: 5003  │
+└──────────────┘    └─────────────────┘
 ```
 
-### 2. Obtener Historial
+## Inicio Rápido con Docker
 
-```http
-GET /api/notifications/history
+### Levantar TODO el sistema:
 
-Response 200:
-{
-  "notifications": [
-    {
-      "id": "uuid",
-      "type": "email",
-      "message": "...",
-      "date_sent": "2024-11-15T10:30:00",
-      "recipients": ["id1", "id2"]
-    }
-  ]
-}
+```bash
+# Clonar repositorio
+git clone <repo-url>
+cd event-management-microservices
+
+# Levantar servicios
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Verificar estado
+docker-compose ps
 ```
 
-### 3. Obtener Notificación por ID
+### Servicios disponibles:
 
-```http
-GET /api/notifications/{id}
+- **Database Service**: http://localhost:3000
+  - Swagger: http://localhost:3000/api-docs
+- **Notifications Service**: http://localhost:5003
+  - Health: http://localhost:5003/api/notifications/health
+- **PostgreSQL**: localhost:5432
+  - User: postgres
+  - Password: password
+  - Database: database_service_db
 
-Response 200:
-{
-  "id": "uuid",
-  "type": "sms",
-  "message": "...",
-  "date_sent": "2024-11-15T10:30:00",
-  "recipients": ["id1"]
-}
-```
+## Desarrollo Local
 
-### 4. Health Check
-
-```http
-GET /api/notifications/health
-
-Response 200:
-{
-  "status": "healthy",
-  "service": "notifications",
-  "database_connection": "ok"
-}
-```
-
-## Instalación
+### Notifications Service:
 
 ```bash
 cd notifications-service
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
+
+# Asegurar que database-service está corriendo
+export DATABASE_SERVICE_URL=http://localhost:3000
+python src/app.py
 ```
 
-## Ejecución
+### Tests:
 
 ```bash
-python app.py
-# Servicio corriendo en http://localhost:5003
-```
-
-## Pruebas
-
-```bash
-# Pruebas unitarias
+# Tests unitarios
+cd notifications-service
 pytest tests/test_notifications.py -v
 
-# Con cobertura
-pytest tests/ --cov=app --cov-report=html
-
-# Pruebas de integración (requiere BD corriendo)
+# Tests de integración (requiere BD corriendo)
+docker-compose up -d postgres database-service
 pytest tests/test_integration.py -v
 ```
 
-## Dependencias del Servicio
+## Detener Servicios
 
-- **Módulo Base de Datos** (puerto 5000)
-  - GET /api/notifications - Obtener historial
-  - POST /api/notifications - Guardar notificación
-  - GET /api/notifications/{id} - Obtener por ID
-  - GET /api/attendees/{id} - Obtener datos del asistente
+```bash
+# Detener
+docker-compose down
 
-## Cobertura de Tests
-
-Objetivo: Mínimo 80% de cobertura
-
-- Pruebas unitarias: Lógica de envío y validación
-- Pruebas de integración: Comunicación con BD
-- Pruebas de humo: Flujos completos con otros servicios
+# Detener y limpiar datos
+docker-compose down -v
+```
