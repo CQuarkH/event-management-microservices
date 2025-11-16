@@ -192,8 +192,63 @@ def get_notification(notification_id):
         return jsonify({'error': f'Database service unavailable: {str(e)}'}), 500
 
 
+@app.route('/api/notifications/health', methods=['GET'])
+def health_check():
+    """
+    Verifica el estado del servicio y la conexión con BD
+    
+    Response 200/503:
+    {
+        "status": "healthy" | "unhealthy",
+        "service": "notifications",
+        "database_connection": "ok" | "error" | "unreachable",
+        "port": number
+    }
+    """
+    service_info = {
+        'service': 'notifications',
+        'status': 'healthy',
+        'port': app.config['NOTIFICATIONS_PORT']
+    }
+    
+    # Verificar conexión con servicio de BD
+    try:
+        # Intentar hacer un GET simple al servicio de BD
+        response = requests.get(f"{DB_SERVICE_URL}/notifications", timeout=2)
+        
+        if response.status_code == 200:
+            service_info['database_connection'] = 'ok'
+        else:
+            service_info['database_connection'] = 'error'
+            service_info['status'] = 'unhealthy'
+            return jsonify(service_info), 503
+            
+    except Exception as e:
+        service_info['database_connection'] = 'unreachable'
+        service_info['status'] = 'unhealthy'
+        return jsonify(service_info), 503
+    
+    return jsonify(service_info), 200
+
+
+@app.route('/', methods=['GET'])
+def index():
+    """Endpoint raíz con información del servicio"""
+    return jsonify({
+        'service': 'Notifications Service',
+        'version': '1.0.0',
+        'endpoints': {
+            'send': 'POST /api/notifications/send',
+            'history': 'GET /api/notifications/history',
+            'get_one': 'GET /api/notifications/<id>',
+            'health': 'GET /api/notifications/health'
+        }
+    }), 200
+
+
 if __name__ == '__main__':
     port = app.config['NOTIFICATIONS_PORT']
     print(f"🚀 Notifications Service running on http://localhost:{port}")
     print(f"📊 Database Service URL: {DB_SERVICE_URL}")
+    print(f"📋 API Documentation: http://localhost:{port}/")
     app.run(debug=app.config['DEBUG'], port=port, host='0.0.0.0')
