@@ -1,5 +1,7 @@
 import pytest
 from src.app import validate_notification_data
+from unittest.mock import patch, Mock
+import json
 
 class TestValidation:
     """Tests para validación de datos - TDD Fase RED"""
@@ -132,3 +134,161 @@ class TestSendFunctions:
         
         captured = capsys.readouterr()
         assert 'SMS' in captured.out
+        
+        
+class TestSendEndpoint:
+    """Tests para endpoint POST /api/notifications/send - TDD Fase RED"""
+    
+    @patch('src.app.requests.post')
+    @patch('src.app.send_email')
+    def test_send_email_notification_success(self, mock_send_email, mock_post, 
+                                            client, valid_email_notification):
+        """Debe enviar notificación EMAIL y guardar en BD"""
+        # Mock del envío
+        mock_send_email.return_value = True
+        
+        # Mock de la respuesta del servicio de BD
+        mock_post.return_value = Mock(
+            status_code=201,
+            json=lambda: {
+                'id': 'notif-123-uuid',
+                'type': 'EMAIL',
+                'message': 'Bienvenido al evento',
+                'recipients': ['user1@example.com', 'user2@example.com'],
+                'sentAt': '2024-11-15T10:30:00Z',
+                'createdAt': '2024-11-15T10:30:00Z',
+                'updatedAt': '2024-11-15T10:30:00Z'
+            }
+        )
+        
+        response = client.post(
+            '/api/notifications/send',
+            data=json.dumps(valid_email_notification),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 201
+        data = response.get_json()
+        assert data['status'] == 'sent'
+        assert 'notification_id' in data
+        assert data['sent_count'] == 2
+        
+        # Verificar que se llamó a send_email
+        mock_send_email.assert_called_once_with(
+            valid_email_notification['recipients'],
+            valid_email_notification['message']
+        )
+        
+        # Verificar que se llamó al servicio de BD
+        mock_post.assert_called_once()
+        call_args = mock_post.call_args
+        assert call_args[0][0] == 'http://localhost:3000/notifications'
+    
+    @patch('src.app.requests.post')
+    @patch('src.app.send_sms')
+    def test_send_sms_notification_success(self, mock_send_sms, mock_post, 
+                                          client, valid_sms_notification):
+        """Debe enviar notificación SMS y guardar en BD"""
+        mock_send_sms.return_value = True
+        mock_post.return_value = Mock(
+            status_code=201,
+            json=lambda: {
+                'id': 'notif-456-uuid',
+                'type': 'SMS',
+                'message': 'Tu entrada ha sido confirmada',
+                'recipients': ['+56912345678', '+56987654321'],
+                'sentAt': '2024-11-15T10:30:00Z',
+                'createdAt': '2024-11-15T10:30:00Z',
+                'updatedAt': '2024-11-15T10:30:00Z'
+            }
+        )
+        
+        response = client.post(
+            '/api/notifications/send',
+            data=json.dumps(valid_sms_notification),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 201
+        data = response.get_json()
+        assert data['status'] == 'sent'
+        assert data['sent_count'] == 2
+        mock_send_sms.assert_called_once()
+    
+    def test_send_notification_invalid_data(self, client):
+        """Debe rechazar datos inválidos con 400"""
+        invalid_data = {
+            'type': 'TELEGRAM',  # tipo inválido
+            'message': 'Test'
+            # falta recipients
+        }
+        
+        response = client.post(
+            '/api/notifications/send',
+            data=json.dumps(invalid_data),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert 'errors' in data
+        assert len(data['errors']) > 0
+    
+    def test_send_notification_missing_type(self, client):
+        """Debe rechazar request sin type"""
+        invalid_data = {
+            'message': 'Test',
+            'recipients': ['user@test.com']
+        }
+        
+        response = client.post(
+            '/api/notifications/send',
+            data=json.dumps(invalid_data),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 400
+    
+    @patch('src.app.requests.post')
+    @patch('src.app.send_email')
+    def test_send_notification_database_error(self, mock_send_email, mock_post, 
+                                             client, valid_email_notification):
+        """Debe manejar error al guardar en BD con 500"""
+        mock_send_email.return_value = True
+        
+        # Simular error del servicio de BD
+        mock_post.return_value = Mock(
+            status_code=500,
+            json=lambda: {'error': 'Database error'}
+        )
+        
+        response = client.post(
+            '/api/notifications/send',
+            data=json.dumps(valid_email_notification),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 500
+        data = response.get_json()
+        assert 'error' in data
+    
+    @patch('src.app.requests.post')
+    @patch('src.app.send_email')
+    def test_send_notification_database_unavailable(self, mock_send_email, mock_post, 
+                                                    client, valid_email_notification):
+        """Debe manejar cuando el servicio de BD no está disponible"""
+        mock_send_email.return_value = True
+        
+        # Simular que el servicio de BD no responde
+        mock_post.side_effect = Exception('Connection refused')
+        
+        response = client.post(
+            '/api/notifications/send',
+            data=json.dumps(valid_email_notification),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 500
+        data = response.get_json()
+        assert 'error' in data
+        assert 'unavailable' in data['error'].lower() or 'connection' in data['error'].lower()
