@@ -292,3 +292,83 @@ class TestSendEndpoint:
         data = response.get_json()
         assert 'error' in data
         assert 'unavailable' in data['error'].lower() or 'connection' in data['error'].lower()
+        
+class TestHistoryEndpoint:
+    """Tests para endpoint GET /api/notifications/history - TDD Fase RED"""
+    
+    @patch('src.app.requests.get')
+    def test_get_history_success(self, mock_get, client):
+        """Debe obtener historial de notificaciones desde BD"""
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: [
+                {
+                    'id': 'notif-1',
+                    'type': 'EMAIL',
+                    'message': 'Welcome',
+                    'recipients': ['user1@test.com'],
+                    'sentAt': '2024-11-15T10:00:00Z',
+                    'createdAt': '2024-11-15T10:00:00Z',
+                    'updatedAt': '2024-11-15T10:00:00Z'
+                },
+                {
+                    'id': 'notif-2',
+                    'type': 'SMS',
+                    'message': 'Reminder',
+                    'recipients': ['+56912345678'],
+                    'sentAt': '2024-11-15T11:00:00Z',
+                    'createdAt': '2024-11-15T11:00:00Z',
+                    'updatedAt': '2024-11-15T11:00:00Z'
+                }
+            ]
+        )
+        
+        response = client.get('/api/notifications/history')
+        
+        assert response.status_code == 200
+        data = response.get_json()
+        assert 'notifications' in data
+        assert len(data['notifications']) == 2
+        
+        # Verificar que se llamó al servicio de BD
+        mock_get.assert_called_once_with(
+            'http://localhost:3000/notifications',
+            timeout=5
+        )
+    
+    @patch('src.app.requests.get')
+    def test_get_history_empty(self, mock_get, client):
+        """Debe manejar historial vacío"""
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: []
+        )
+        
+        response = client.get('/api/notifications/history')
+        
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['notifications'] == []
+    
+    @patch('src.app.requests.get')
+    def test_get_history_database_error(self, mock_get, client):
+        """Debe manejar error del servicio de BD"""
+        mock_get.return_value = Mock(
+            status_code=500,
+            json=lambda: {'error': 'Internal server error'}
+        )
+        
+        response = client.get('/api/notifications/history')
+        
+        assert response.status_code == 500
+    
+    @patch('src.app.requests.get')
+    def test_get_history_database_unavailable(self, mock_get, client):
+        """Debe manejar cuando BD no está disponible"""
+        mock_get.side_effect = Exception('Connection timeout')
+        
+        response = client.get('/api/notifications/history')
+        
+        assert response.status_code == 500
+        data = response.get_json()
+        assert 'error' in data
