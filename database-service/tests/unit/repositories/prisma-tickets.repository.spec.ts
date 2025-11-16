@@ -41,37 +41,66 @@ describe("PrismaTicketsRepository (unit)", () => {
     expect(notFound).toBeNull();
   });
 
-  test("findAll -> respects pagination", async () => {
+  test("findAll -> respects pagination and orderBy", async () => {
     (prisma as any).ticket.findMany.mockResolvedValue([{ id: "t1" }]);
     const items = await repo.findAll({}, { page: 2, pageSize: 5 });
     expect((prisma as any).ticket.findMany).toHaveBeenCalledWith({
       where: {},
       skip: 5,
       take: 5,
+      orderBy: { createdAt: "desc" },
     });
     expect(Array.isArray(items)).toBe(true);
   });
 
-  test("create -> forwards to prisma.ticket.create", async () => {
+  test("create -> forwards transformed data to prisma.ticket.create", async () => {
     const payload = {
       eventId: "e1",
       type: "general",
       price: 10,
       quantityAvailable: 100,
     };
+
+    // Prisma client is expected to receive normalized enum value (e.g. "GENERAL")
     (prisma as any).ticket.create.mockResolvedValue({
       id: "created",
-      ...payload,
+      eventId: payload.eventId,
+      type: "GENERAL",
+      price: payload.price,
+      quantityAvailable: payload.quantityAvailable,
+      quantitySold: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
+
     const created = await repo.create(payload as any);
+
+    // We assert prisma.create called with a data object that contains the Prisma-shaped fields
     expect((prisma as any).ticket.create).toHaveBeenCalledWith({
-      data: payload,
+      data: expect.objectContaining({
+        eventId: "e1",
+        price: 10,
+        quantityAvailable: 100,
+        quantitySold: 0,
+        // type normalized to Prisma enum string
+        type: "GENERAL",
+      }),
     });
+
+    // repo maps the returned Prisma object back to app-level TicketEntity -> id should be present
     expect(created).toEqual(expect.objectContaining({ id: "created" }));
   });
 
   test("update -> forwards to prisma.ticket.update", async () => {
-    (prisma as any).ticket.update.mockResolvedValue({ id: "t1", price: 50 });
+    (prisma as any).ticket.update.mockResolvedValue({
+      id: "t1",
+      price: 50,
+      type: "GENERAL",
+      quantityAvailable: 10,
+      quantitySold: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     const up = await repo.update("t1", { price: 50 });
     expect((prisma as any).ticket.update).toHaveBeenCalledWith({
       where: { id: "t1" },
@@ -88,15 +117,16 @@ describe("PrismaTicketsRepository (unit)", () => {
     });
   });
 
-  test("findByEventAndType -> returns first match or null", async () => {
+  test("findByEventAndType -> returns first match or null (type normalized)", async () => {
     (prisma as any).ticket.findFirst.mockResolvedValue({
       id: "t1",
       eventId: "e1",
-      type: "general",
+      type: "GENERAL",
     });
     const res = await repo.findByEventAndType("e1", "general");
+    // repository normalizes 'general' -> 'GENERAL' before calling prisma
     expect((prisma as any).ticket.findFirst).toHaveBeenCalledWith({
-      where: { eventId: "e1", type: "general" },
+      where: { eventId: "e1", type: "GENERAL" },
     });
     expect(res).toEqual(expect.objectContaining({ id: "t1" }));
 

@@ -6,22 +6,38 @@ import type {
   AttendeeEntity,
   AttendeeUpdateStatusInput,
 } from "../interfaces/i-attendees.repository.js";
-import { AttendeeStatus } from "@prisma/client";
 
+/**
+ * Utilities: normalize status values between DB (UPPERCASE enums) and app (lowercase)
+ * - DB uses: "CONFIRMED" | "UNCONFIRMED" (enum strings)
+ * - App uses: "confirmed" | "unconfirmed"
+ */
 
 function fromPrismaStatus(
-  s: AttendeeStatus | null | undefined
+  s: string | null | undefined
 ): "confirmed" | "unconfirmed" {
   if (!s) return "unconfirmed";
-  if (s === AttendeeStatus.CONFIRMED) return "confirmed";
+  const upper = String(s).toUpperCase();
+  if (upper === "CONFIRMED") return "confirmed";
   return "unconfirmed";
 }
 
+function toPrismaStatus(status?: string | null): string {
+  // Accept either "confirmed"|"unconfirmed" (app) or already uppercase values.
+  if (!status) return "UNCONFIRMED";
+  const s = String(status).toUpperCase();
+  if (s === "CONFIRMED") return "CONFIRMED";
+  if (s === "UNCONFIRMED") return "UNCONFIRMED";
+  // If we get an unexpected value, throw — this mirrors validation behaviour.
+  throw new Error("Invalid status");
+}
+
 function mapPrismaAttendeeToEntity(a: any): AttendeeEntity {
+  if (!a) return a;
   return {
     id: a.id,
     name: a.name,
-    email: a.email,
+    email: a.email ?? null,
     phone: a.phone ?? null,
     status: fromPrismaStatus(a.status),
     eventId: a.eventId ?? null,
@@ -29,24 +45,16 @@ function mapPrismaAttendeeToEntity(a: any): AttendeeEntity {
   };
 }
 
-function normalizeStatusForPrisma(status?: string) {
-  if (!status) return AttendeeStatus.UNCONFIRMED;
-  const s = String(status).toUpperCase();
-  if (!Object.values(AttendeeStatus).includes(s as AttendeeStatus)) {
-    throw new Error("Invalid status");
-  }
-  return s as AttendeeStatus;
-}
-
 export class PrismaAttendeesRepository implements IAttendeesRepository {
   async create(data: AttendeeCreateInput): Promise<AttendeeEntity> {
-    const statusForPrisma = normalizeStatusForPrisma(data.status);
+    const statusForPrisma = toPrismaStatus(data.status ?? "unconfirmed");
     const created = await prisma.attendee.create({
       data: {
         name: data.name,
         email: data.email,
         phone: data.phone ?? null,
-        status: statusForPrisma,
+        // CAST HERE to avoid TS complaining about incompatible enum types at compile time
+        status: statusForPrisma as any,
         eventId: data.eventId ?? null,
       },
     });
@@ -80,10 +88,10 @@ export class PrismaAttendeesRepository implements IAttendeesRepository {
     id: string,
     data: AttendeeUpdateStatusInput
   ): Promise<AttendeeEntity> {
-    const statusForPrisma = normalizeStatusForPrisma(data.status);
+    const statusForPrisma = toPrismaStatus(data.status);
     const updated = await prisma.attendee.update({
       where: { id },
-      data: { status: statusForPrisma },
+      data: { status: statusForPrisma as any },
     });
     return mapPrismaAttendeeToEntity(updated);
   }

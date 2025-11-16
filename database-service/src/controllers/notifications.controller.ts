@@ -1,3 +1,4 @@
+// src/controllers/notifications.controller.ts
 import type { Request, Response, NextFunction } from "express";
 import { PrismaNotificationsRepository } from "../repositories/prisma/prisma-notifications.repository.js";
 import { NotificationsService } from "../services/notifications.service.js";

@@ -12,7 +12,8 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "isolatedModules": true
+    "isolatedModules": true,
+    "removeComments": false
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "tests", "generated"]
