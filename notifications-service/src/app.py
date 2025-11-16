@@ -135,6 +135,32 @@ def send_notification():
         'notification_id': created_notification['id'],
         'sent_count': len(data['recipients'])
     }), 201
+    
+@app.route('/api/notifications/history', methods=['GET'])
+def get_history():
+    """
+    Obtiene el historial de notificaciones desde el servicio de BD
+    
+    Response 200:
+    {
+        "notifications": [...]
+    }
+    """
+    try:
+        response = requests.get(
+            f"{DB_SERVICE_URL}/notifications",
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            notifications = response.json()
+            return jsonify({'notifications': notifications}), 200
+        else:
+            return jsonify({'error': 'Failed to fetch history'}), response.status_code
+            
+    except Exception as e:
+        # Captura TODAS las excepciones (no solo RequestException)
+        return jsonify({'error': f'Database service unavailable: {str(e)}'}), 500
 
 
 if __name__ == '__main__':
