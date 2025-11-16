@@ -1,8 +1,15 @@
-from flask import Flask
 from src.config import Config
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import requests
+from datetime import datetime
 
 app = Flask(__name__)
 app.config.from_object(Config)
+CORS(app)
+
+
+DB_SERVICE_URL = app.config['DATABASE_SERVICE_URL']
 
 # =================== FUNCIÓN DE VALIDACIÓN ===================
 
@@ -76,9 +83,62 @@ def send_sms(recipients, message):
     return True
 
 
+# =================== ENDPOINTS ===================
+
+@app.route('/api/notifications/send', methods=['POST'])
+def send_notification():
+    """
+    Envía una notificación y la registra en el servicio de BD
+    """
+    data = request.get_json()
+    
+    # Validar datos
+    errors = validate_notification_data(data)
+    if errors:
+        return jsonify({'errors': errors}), 400
+    
+    # Simular envío según tipo
+    try:
+        if data['type'] == 'EMAIL':
+            send_email(data['recipients'], data['message'])
+        else:  # SMS
+            send_sms(data['recipients'], data['message'])
+    except Exception as e:
+        return jsonify({'error': f'Failed to send notification: {str(e)}'}), 500
+    
+    # Preparar datos para guardar en BD
+    notification_record = {
+        'type': data['type'],
+        'message': data['message'],
+        'recipients': data['recipients']
+    }
+    
+    # Guardar en el servicio de BD
+    try:
+        response = requests.post(
+            f"{DB_SERVICE_URL}/notifications",
+            json=notification_record,
+            timeout=5
+        )
+        
+        if response.status_code not in [200, 201]:
+            return jsonify({'error': 'Failed to save notification to database'}), 500
+        
+        created_notification = response.json()
+        
+    except Exception as e:
+        # Captura TODAS las excepciones (RequestException, timeout, etc)
+        return jsonify({'error': f'Database service unavailable: {str(e)}'}), 500
+    
+    return jsonify({
+        'status': 'sent',
+        'notification_id': created_notification['id'],
+        'sent_count': len(data['recipients'])
+    }), 201
+
+
 if __name__ == '__main__':
-    app.run(
-        debug=app.config['DEBUG'], 
-        port=app.config['NOTIFICATIONS_PORT'],
-        host='0.0.0.0'
-    )
+    port = app.config['NOTIFICATIONS_PORT']
+    print(f"🚀 Notifications Service running on http://localhost:{port}")
+    print(f"📊 Database Service URL: {DB_SERVICE_URL}")
+    app.run(debug=app.config['DEBUG'], port=port, host='0.0.0.0')
