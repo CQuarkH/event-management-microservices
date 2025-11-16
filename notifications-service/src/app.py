@@ -161,6 +161,35 @@ def get_history():
     except Exception as e:
         # Captura TODAS las excepciones (no solo RequestException)
         return jsonify({'error': f'Database service unavailable: {str(e)}'}), 500
+    
+@app.route('/api/notifications/<notification_id>', methods=['GET'])
+def get_notification(notification_id):
+    """
+    Obtiene una notificación específica por ID desde el servicio de BD
+    
+    Response 200:
+    {
+        "id": "uuid",
+        "type": "EMAIL" | "SMS",
+        "message": "string",
+        ...
+    }
+    """
+    try:
+        response = requests.get(
+            f"{DB_SERVICE_URL}/notifications/{notification_id}",
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json()), 200
+        elif response.status_code == 404:
+            return jsonify({'error': 'Notification not found'}), 404
+        else:
+            return jsonify({'error': 'Failed to fetch notification'}), response.status_code
+            
+    except Exception as e:
+        return jsonify({'error': f'Database service unavailable: {str(e)}'}), 500
 
 
 if __name__ == '__main__':
