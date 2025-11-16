@@ -1,4 +1,3 @@
-// tests/integration/attendees.int.spec.ts
 import { jest } from "@jest/globals";
 import { GenericContainer } from "testcontainers";
 import { execSync } from "child_process";
@@ -7,9 +6,9 @@ import request from "supertest";
 jest.setTimeout(120_000);
 
 describe("Attendees API (integration)", () => {
-  let container: any;
-  let app: any;
-  let prisma: any;
+  let container;
+  let app;
+  let prisma;
 
   beforeAll(async () => {
     container = await new GenericContainer("postgres:15")
@@ -25,7 +24,10 @@ describe("Attendees API (integration)", () => {
     const port = container.getMappedPort(5432);
 
     process.env.DATABASE_URL = `postgresql://postgres:password@${host}:${port}/testdb?schema=public`;
+    // Evita EPERM en Windows
+    process.env.PRISMA_FORCE_NAPI = "true";
 
+    // Aplica schema en la DB efímera
     execSync("npx prisma db push --schema=./prisma/schema.prisma", {
       stdio: "inherit",
       env: process.env,
@@ -75,6 +77,7 @@ describe("Attendees API (integration)", () => {
       .expect(201);
     const id = post.body.id;
 
+    // Usamos el valor en minúsculas que tu servicio valida: "confirmed"
     const patched = await request(app)
       .patch(`/attendees/${id}/status`)
       .send({ status: "confirmed" })

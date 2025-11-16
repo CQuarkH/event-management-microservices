@@ -2,7 +2,6 @@ import { jest } from "@jest/globals";
 import { GenericContainer } from "testcontainers";
 import { execSync } from "child_process";
 import request from "supertest";
-import { prisma as globalPrisma } from "../../src/prisma/client.js";
 
 jest.setTimeout(120_000);
 
@@ -24,8 +23,8 @@ describe("Tickets API (integration)", () => {
     const host = container.getHost();
     const port = container.getMappedPort(5432);
     process.env.DATABASE_URL = `postgresql://postgres:password@${host}:${port}/testdb?schema=public`;
+    process.env.PRISMA_FORCE_NAPI = "true";
 
-    // ensure schema is applied to the ephemeral DB
     execSync("npx prisma db push --schema=./prisma/schema.prisma", {
       stdio: "inherit",
       env: process.env,
@@ -52,10 +51,11 @@ describe("Tickets API (integration)", () => {
       },
     });
 
+    // usa el enum en mayúsculas que Prisma espera
     await prisma.ticket.create({
       data: {
         eventId: ev.id,
-        type: "general",
+        type: "GENERAL",
         price: 20,
         quantityAvailable: 3,
         quantitySold: 0,
@@ -79,7 +79,7 @@ describe("Tickets API (integration)", () => {
     expect(ev).toBeTruthy();
 
     const avail = await request(app)
-      .get(`/tickets/availability?eventId=${ev.id}&type=general`)
+      .get(`/tickets/availability?eventId=${ev.id}&type=GENERAL`)
       .expect(200);
     expect(avail.body.available).toBe(true);
     expect(avail.body.quantityAvailable).toBeGreaterThan(0);
@@ -88,7 +88,7 @@ describe("Tickets API (integration)", () => {
   test("POST /tickets/purchase -> decrement inventory", async () => {
     // get ticket
     const tList = await request(app).get("/tickets").expect(200);
-    const ticket = tList.body.find((t: any) => t.type === "general");
+    const ticket = tList.body.find((t: any) => t.type === "GENERAL");
     expect(ticket).toBeTruthy();
 
     const post = await request(app)
@@ -98,8 +98,8 @@ describe("Tickets API (integration)", () => {
     expect(post.body.status).toBe("purchased");
     // check DB
     const check = await prisma.ticket.findUnique({ where: { id: ticket.id } });
-    expect(check.quantityAvailable).toBe(ticket.quantityAvailable - 2);
-    expect(check.quantitySold).toBe(ticket.quantitySold + 2);
+    expect(check!.quantityAvailable).toBe(ticket.quantityAvailable - 2);
+    expect(check!.quantitySold).toBe(ticket.quantitySold + 2);
   });
 
   test("concurrency: two purchases attempt on limited stock", async () => {
@@ -124,15 +124,11 @@ describe("Tickets API (integration)", () => {
       .send({ ticketId: t.id, quantity: 1 });
 
     const results = await Promise.allSettled([p1, p2]);
-    const successes = results.filter(
+    const successCount = results.filter(
       (r: any) => r.status === "fulfilled" && r.value.status === 201
-    );
-    const failures = results.filter(
-      (r: any) =>
-        (r.status === "fulfilled" && r.value.status !== 201) ||
-        r.status === "rejected"
-    );
-    // exactly one success expected
-    expect(successes.length).toBe(1);
+    ).length;
+
+    // exactly one success expected (no oversell)
+    expect(successCount).toBe(1);
   });
 });

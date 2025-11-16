@@ -6,27 +6,60 @@ import type {
   AttendeeEntity,
   AttendeeUpdateStatusInput,
 } from "../interfaces/i-attendees.repository.js";
+import { AttendeeStatus } from "@prisma/client";
+
+
+function fromPrismaStatus(
+  s: AttendeeStatus | null | undefined
+): "confirmed" | "unconfirmed" {
+  if (!s) return "unconfirmed";
+  if (s === AttendeeStatus.CONFIRMED) return "confirmed";
+  return "unconfirmed";
+}
+
+function mapPrismaAttendeeToEntity(a: any): AttendeeEntity {
+  return {
+    id: a.id,
+    name: a.name,
+    email: a.email,
+    phone: a.phone ?? null,
+    status: fromPrismaStatus(a.status),
+    eventId: a.eventId ?? null,
+    createdAt: a.createdAt,
+  };
+}
+
+function normalizeStatusForPrisma(status?: string) {
+  if (!status) return AttendeeStatus.UNCONFIRMED;
+  const s = String(status).toUpperCase();
+  if (!Object.values(AttendeeStatus).includes(s as AttendeeStatus)) {
+    throw new Error("Invalid status");
+  }
+  return s as AttendeeStatus;
+}
 
 export class PrismaAttendeesRepository implements IAttendeesRepository {
   async create(data: AttendeeCreateInput): Promise<AttendeeEntity> {
+    const statusForPrisma = normalizeStatusForPrisma(data.status);
     const created = await prisma.attendee.create({
       data: {
         name: data.name,
         email: data.email,
         phone: data.phone ?? null,
-        status: data.status ?? "unconfirmed",
+        status: statusForPrisma,
         eventId: data.eventId ?? null,
       },
     });
-    return created as AttendeeEntity;
+    return mapPrismaAttendeeToEntity(created);
   }
 
   async findById(id: string): Promise<AttendeeEntity | null> {
     const found = await prisma.attendee.findUnique({
       where: { id },
-      include: { event: true }, // include event for convenience
+      include: { event: true },
     });
-    return found as unknown as AttendeeEntity | null;
+    if (!found) return null;
+    return mapPrismaAttendeeToEntity(found);
   }
 
   async findAll(
@@ -40,18 +73,19 @@ export class PrismaAttendeesRepository implements IAttendeesRepository {
       take,
       orderBy: { createdAt: "desc" },
     });
-    return items as AttendeeEntity[];
+    return items.map(mapPrismaAttendeeToEntity);
   }
 
   async updateStatus(
     id: string,
     data: AttendeeUpdateStatusInput
   ): Promise<AttendeeEntity> {
+    const statusForPrisma = normalizeStatusForPrisma(data.status);
     const updated = await prisma.attendee.update({
       where: { id },
-      data: { status: data.status },
+      data: { status: statusForPrisma },
     });
-    return updated as AttendeeEntity;
+    return mapPrismaAttendeeToEntity(updated);
   }
 
   async delete(id: string): Promise<void> {

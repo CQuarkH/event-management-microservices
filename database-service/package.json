@@ -13,7 +13,7 @@
     "lint": "eslint . --ext .ts",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "npm run prisma:generate && cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --testPathPatterns=tests/unit",
-    "test:integration": "npm run prisma:generate && cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --testPathPatterns=tests/integration",
+    "test:integration": "cross-env PRISMA_FORCE_NAPI=true npm run prisma:generate && cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --testPathPatterns=tests/integration",
     "test:coverage": "npm run prisma:generate && cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "keywords": [],

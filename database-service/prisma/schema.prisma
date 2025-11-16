@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["referentialActions"]
 }
 
 datasource db {
@@ -7,42 +8,64 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AttendeeStatus {
+  CONFIRMED
+  UNCONFIRMED
+}
+
+enum TicketType {
+  GENERAL
+  VIP
+}
+
+enum NotificationType {
+  EMAIL
+  SMS
+}
+
 model Event {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   name        String
   date        DateTime
   location    String
   type        String
   description String?
-  tickets     Ticket[]
-  attendees   Attendee[]
+  tickets     Ticket[]   @relation("EventTickets")
+  attendees   Attendee[] @relation("EventAttendees")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Attendee {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
   name      String
-  email     String   @unique
+  email     String         @unique
   phone     String?
-  status    String   // "confirmed" | "unconfirmed"
-  event     Event?   @relation(fields: [eventId], references: [id])
+  status    AttendeeStatus @default(UNCONFIRMED)
+  event     Event?         @relation("EventAttendees", fields: [eventId], references: [id], onDelete: Cascade)
   eventId   String?
-  createdAt DateTime @default(now())
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 }
 
 model Ticket {
-  id               String   @id @default(uuid())
-  type             String   // "general" | "VIP"
-  price            Float
+  id                String     @id @default(uuid())
+  type              TicketType
+  price             Float
   quantityAvailable Int
-  quantitySold     Int      @default(0)
-  event            Event?   @relation(fields: [eventId], references: [id])
-  eventId          String?
+  quantitySold      Int        @default(0)
+  event             Event?     @relation("EventTickets", fields: [eventId], references: [id], onDelete: Cascade)
+  eventId           String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 }
 
 model Notification {
-  id         String   @id @default(uuid())
-  type       String   // "email" | "sms"
+  id         String           @id @default(uuid())
+  type       NotificationType
   message    String
-  sentAt     DateTime @default(now())
-  recipients String   // JSON string or text list (simple)
+  recipients String[]         // Postgres text[]
+  sentAt     DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 }

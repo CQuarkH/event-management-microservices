@@ -9,6 +9,7 @@ import healthRouter from "./routes/health.route.js";
 import eventsRouter from "./routes/events.routes.js";
 import attendeesRouter from "./routes/attendees.routes.js";
 import ticketsRouter from "./routes/tickets.routes.js";
+import notifRoutes from "./routes/notifications.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
 dotenv.config();
@@ -22,6 +23,7 @@ app.use("/health", healthRouter);
 app.use("/events", eventsRouter);
 app.use("/attendees", attendeesRouter);
 app.use("/tickets", ticketsRouter);
+app.use(notifRoutes);
 
 // Swagger UI
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
