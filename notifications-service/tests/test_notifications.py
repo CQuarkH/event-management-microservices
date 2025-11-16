@@ -85,3 +85,50 @@ class TestValidation:
         }
         errors = validate_notification_data(data)
         assert len(errors) > 0
+        
+        
+class TestSendFunctions:
+    """Tests para funciones de envío simulado - TDD Fase RED"""
+    
+    def test_send_email_returns_true(self):
+        """send_email debe retornar True al simular envío exitoso"""
+        from src.app import send_email
+        result = send_email(['user@test.com'], 'Test message')
+        assert result is True
+    
+    def test_send_email_with_multiple_recipients(self):
+        """send_email debe manejar múltiples destinatarios"""
+        from src.app import send_email
+        recipients = ['user1@test.com', 'user2@test.com', 'user3@test.com']
+        result = send_email(recipients, 'Hello everyone')
+        assert result is True
+    
+    def test_send_email_prints_info(self, capsys):
+        """send_email debe imprimir información del envío"""
+        from src.app import send_email
+        send_email(['user1@test.com', 'user2@test.com'], 'Hello')
+        
+        captured = capsys.readouterr()
+        assert 'EMAIL' in captured.out
+        assert '2' in captured.out  # número de destinatarios
+    
+    def test_send_sms_returns_true(self):
+        """send_sms debe retornar True al simular envío exitoso"""
+        from src.app import send_sms
+        result = send_sms(['+56912345678'], 'Test SMS')
+        assert result is True
+    
+    def test_send_sms_with_multiple_numbers(self):
+        """send_sms debe manejar múltiples números"""
+        from src.app import send_sms
+        numbers = ['+56912345678', '+56987654321', '+56911111111']
+        result = send_sms(numbers, 'SMS test')
+        assert result is True
+    
+    def test_send_sms_prints_info(self, capsys):
+        """send_sms debe imprimir información del envío"""
+        from src.app import send_sms
+        send_sms(['+56987654321'], 'SMS message')
+        
+        captured = capsys.readouterr()
+        assert 'SMS' in captured.out
