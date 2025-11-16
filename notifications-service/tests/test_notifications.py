@@ -430,3 +430,43 @@ class TestGetByIdEndpoint:
         response = client.get('/api/notifications/some-id')
         
         assert response.status_code == 500
+            
+class TestHealthCheck:
+    """Tests para endpoint GET /api/notifications/health - TDD Fase RED"""
+    
+    @patch('src.app.requests.get')
+    def test_health_check_all_services_ok(self, mock_get, client):
+        """Debe retornar healthy cuando todo está OK"""
+        mock_get.return_value = Mock(status_code=200)
+        
+        response = client.get('/api/notifications/health')
+        
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['status'] == 'healthy'
+        assert data['service'] == 'notifications'
+        assert data['database_connection'] == 'ok'
+    
+    @patch('src.app.requests.get')
+    def test_health_check_database_down(self, mock_get, client):
+        """Debe detectar cuando el servicio de BD está caído"""
+        mock_get.side_effect = Exception('Connection refused')
+        
+        response = client.get('/api/notifications/health')
+        
+        assert response.status_code == 503
+        data = response.get_json()
+        assert data['status'] == 'unhealthy'
+        assert data['database_connection'] == 'unreachable'
+    
+    @patch('src.app.requests.get')
+    def test_health_check_database_error(self, mock_get, client):
+        """Debe detectar cuando BD responde con error"""
+        mock_get.return_value = Mock(status_code=500)
+        
+        response = client.get('/api/notifications/health')
+        
+        assert response.status_code == 503
+        data = response.get_json()
+        assert data['status'] == 'unhealthy'
+        assert data['database_connection'] == 'error'
