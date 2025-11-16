@@ -372,3 +372,61 @@ class TestHistoryEndpoint:
         assert response.status_code == 500
         data = response.get_json()
         assert 'error' in data
+        
+class TestGetByIdEndpoint:
+    """Tests para endpoint GET /api/notifications/<id> - TDD Fase RED"""
+    
+    @patch('src.app.requests.get')
+    def test_get_notification_by_id_success(self, mock_get, client):
+        """Debe obtener notificación específica por ID"""
+        notif_id = 'notif-123-uuid'
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: {
+                'id': notif_id,
+                'type': 'EMAIL',
+                'message': 'Test notification',
+                'recipients': ['user@test.com'],
+                'sentAt': '2024-11-15T10:00:00Z',
+                'createdAt': '2024-11-15T10:00:00Z',
+                'updatedAt': '2024-11-15T10:00:00Z'
+            }
+        )
+        
+        response = client.get(f'/api/notifications/{notif_id}')
+        
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['id'] == notif_id
+        assert data['type'] == 'EMAIL'
+        
+        mock_get.assert_called_once_with(
+            f'http://localhost:3000/notifications/{notif_id}',
+            timeout=5
+        )
+    
+    @patch('src.app.requests.get')
+    def test_get_notification_not_found(self, mock_get, client):
+        """Debe retornar 404 si notificación no existe"""
+        mock_get.return_value = Mock(
+            status_code=404,
+            json=lambda: {'error': 'Notification not found'}
+        )
+        
+        response = client.get('/api/notifications/nonexistent-id')
+        
+        assert response.status_code == 404
+        data = response.get_json()
+        assert 'error' in data
+    
+    @patch('src.app.requests.get')
+    def test_get_notification_database_error(self, mock_get, client):
+        """Debe manejar error del servicio de BD"""
+        mock_get.return_value = Mock(
+            status_code=500,
+            json=lambda: {'error': 'Database error'}
+        )
+        
+        response = client.get('/api/notifications/some-id')
+        
+        assert response.status_code == 500
