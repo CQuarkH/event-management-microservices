@@ -33,4 +33,7 @@ export class AttendeesService {
       throw new Error(error.response?.data?.error || 'Error obteniendo asistente');
     }
   }
+  async confirmAttendance(id: string) {
+    throw new Error('Method not implemented.');
+  }
 }

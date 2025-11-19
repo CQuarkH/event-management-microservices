@@ -34,4 +34,13 @@ describe('AttendeesService Unit', () => {
     expect(result).toEqual(mockData);
     expect(mockedAxios.get).toHaveBeenCalledWith(expect.stringContaining('/attendees/1'));
   });
+  test('confirmAttendance -> confirma y envía notificación', async () => {
+    const updated = { id: '1', name: 'Seba', status: 'confirmed', email: 'seba@test.com' };
+    mockedAxios.patch.mockResolvedValue({ data: updated });
+    mockedAxios.post.mockResolvedValue({ data: { status: 'sent' } });
+
+    const result = await service.confirmAttendance('1');
+    expect(result).toEqual(updated);
+    expect(mockedAxios.patch).toHaveBeenCalledWith(expect.stringContaining('/status'), expect.objectContaining({ status: 'confirmed' }));
+  });
 });
