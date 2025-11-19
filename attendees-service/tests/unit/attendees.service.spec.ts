@@ -26,6 +26,7 @@ describe('AttendeesService Unit', () => {
     expect(mockedAxios.post).toHaveBeenCalledWith(expect.stringContaining('/attendees'), expect.any(Object));
     expect(mockedAxios.post).toHaveBeenCalledWith(expect.stringContaining('/notifications/send'), expect.any(Object));
   });
+
   test('getAttendee -> obtiene asistente por id', async () => {
     const mockData = { id: '1', name: 'Seba', email: 'seba@test.com' };
     mockedAxios.get.mockResolvedValue({ data: mockData });
@@ -34,13 +35,35 @@ describe('AttendeesService Unit', () => {
     expect(result).toEqual(mockData);
     expect(mockedAxios.get).toHaveBeenCalledWith(expect.stringContaining('/attendees/1'));
   });
+
   test('confirmAttendance -> confirma y envía notificación', async () => {
-    const updated = { id: '1', name: 'Seba', status: 'confirmed', email: 'seba@test.com' };
+    const updated = { id: '1', name: 'Seba', email: 'seba@test.com', status: 'confirmed' };
     mockedAxios.patch.mockResolvedValue({ data: updated });
     mockedAxios.post.mockResolvedValue({ data: { status: 'sent' } });
 
     const result = await service.confirmAttendance('1');
     expect(result).toEqual(updated);
-    expect(mockedAxios.patch).toHaveBeenCalledWith(expect.stringContaining('/status'), expect.objectContaining({ status: 'confirmed' }));
+    expect(mockedAxios.patch).toHaveBeenCalledWith(expect.stringContaining('/attendees/1/status'), expect.objectContaining({ status: 'confirmed' }));
+    expect(mockedAxios.post).toHaveBeenCalledWith(expect.stringContaining('/notifications/send'), expect.any(Object));
+  });
+
+  test('updateAttendee -> actualiza campos del asistente', async () => {
+    const updated = { id: '1', name: 'Seba Updated', email: 'seba@test.com' };
+    mockedAxios.patch.mockResolvedValue({ data: updated });
+
+    const result = await service.updateAttendee('1', { name: 'Seba Updated' });
+    expect(result).toEqual(updated);
+    expect(mockedAxios.patch).toHaveBeenCalledWith(expect.stringContaining('/attendees/1'), expect.objectContaining({ name: 'Seba Updated' }));
+  });
+
+  test('cancelAttendance -> marca como unconfirmed y notifica', async () => {
+    const updated = { id: '1', name: 'Seba', email: 'seba@test.com', status: 'unconfirmed' };
+    mockedAxios.patch.mockResolvedValue({ data: updated });
+    mockedAxios.post.mockResolvedValue({ data: { status: 'sent' } });
+
+    const result = await service.cancelAttendance('1');
+    expect(result).toEqual(updated);
+    expect(mockedAxios.patch).toHaveBeenCalledWith(expect.stringContaining('/attendees/1/status'), expect.objectContaining({ status: 'unconfirmed' }));
+    expect(mockedAxios.post).toHaveBeenCalledWith(expect.stringContaining('/notifications/send'), expect.any(Object));
   });
 });

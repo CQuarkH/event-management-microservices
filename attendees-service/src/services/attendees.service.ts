@@ -12,16 +12,42 @@ export class AttendeesService {
         status: 'unconfirmed'
       });
       
-      // 2. Notificar
+      const newAttendee = dbResponse.data;
+
+      // 2. Enviar Notificación de Bienvenida
       await axios.post(`${config.notifServiceUrl}/api/notifications/send`, {
         type: 'EMAIL',
-        message: `Hola ${data.name}, gracias por registrarte.`,
+        message: `Hola ${data.name}, gracias por registrarte. Por favor confirma tu asistencia.`,
         recipients: [data.email]
-      }).catch(e => console.error("Notif error:", e.message));
+      }).catch(err => console.error("Error enviando notificación:", err.message));
 
-      return dbResponse.data;
+      return newAttendee;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Error al registrar');
+      throw new Error(error.response?.data?.error || 'Error al registrar asistente');
+    }
+  }
+
+  async confirmAttendance(id: string) {
+    try {
+      // 1. Actualizar estado en Database Service
+      const dbResponse = await axios.patch(`${config.dbServiceUrl}/attendees/${id}/status`, {
+        status: 'confirmed'
+      });
+      
+      const updatedAttendee = dbResponse.data;
+
+      // 2. Enviar Notificación de Confirmación
+      if (updatedAttendee.email) {
+        await axios.post(`${config.notifServiceUrl}/api/notifications/send`, {
+          type: 'EMAIL',
+          message: `¡Tu asistencia ha sido confirmada, ${updatedAttendee.name}!`,
+          recipients: [updatedAttendee.email]
+        }).catch(err => console.error("Error enviando notificación:", err.message));
+      }
+
+      return updatedAttendee;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || 'Error confirmando asistencia');
     }
   }
 
@@ -33,24 +59,38 @@ export class AttendeesService {
       throw new Error(error.response?.data?.error || 'Error obteniendo asistente');
     }
   }
-  
-  async confirmAttendance(id: string) {
+
+  // Actualizar datos de un asistente
+  async updateAttendee(id: string, data: { name?: string; email?: string; phone?: string }) {
+    try {
+      const dbResponse = await axios.patch(`${config.dbServiceUrl}/attendees/${id}`, data);
+      return dbResponse.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || 'Error actualizando asistente');
+    }
+  }
+
+  // Cancelar asistencia
+  async cancelAttendance(id: string) {
     try {
       const dbResponse = await axios.patch(`${config.dbServiceUrl}/attendees/${id}/status`, {
-        status: 'confirmed'
+        status: 'unconfirmed'
       });
-      const updated = dbResponse.data;
 
-      if (updated.email) {
+      const updatedAttendee = dbResponse.data;
+
+      // Notificar cancelación
+      if (updatedAttendee.email) {
         await axios.post(`${config.notifServiceUrl}/api/notifications/send`, {
           type: 'EMAIL',
-          message: `Confirmado: ${updated.name}`,
-          recipients: [updated.email]
-        }).catch(e => console.error(e));
+          message: `Tu registro ha sido cancelado, ${updatedAttendee.name}.`,
+          recipients: [updatedAttendee.email]
+        }).catch(err => console.error('Error enviando notificación de cancelación:', err.message));
       }
-      return updated;
+
+      return updatedAttendee;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Error confirmando');
+      throw new Error(error.response?.data?.error || 'Error cancelando asistencia');
     }
   }
 }
