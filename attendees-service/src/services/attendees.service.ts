@@ -30,8 +30,7 @@ export class AttendeesService {
       const res = await axios.get(`${config.dbServiceUrl}/attendees/${id}`);
       return res.data;
     } catch (error: any) {
-      const message = error.response?.data?.error || error.message || 'Error obteniendo asistente';
-      throw new Error(message);
+      throw new Error(error.response?.data?.error || 'Error obteniendo asistente');
     }
   }
 }
