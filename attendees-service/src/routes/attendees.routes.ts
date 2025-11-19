@@ -5,5 +5,6 @@ const router = Router();
 
 router.post('/', AttendeeController.register);
 router.get('/:id', AttendeeController.getOne);
+router.patch('/:id/confirm', AttendeeController.confirm);
 
 export default router;

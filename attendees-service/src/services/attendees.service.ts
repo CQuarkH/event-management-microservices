@@ -33,7 +33,24 @@ export class AttendeesService {
       throw new Error(error.response?.data?.error || 'Error obteniendo asistente');
     }
   }
+  
   async confirmAttendance(id: string) {
-    throw new Error('Method not implemented.');
+    try {
+      const dbResponse = await axios.patch(`${config.dbServiceUrl}/attendees/${id}/status`, {
+        status: 'confirmed'
+      });
+      const updated = dbResponse.data;
+
+      if (updated.email) {
+        await axios.post(`${config.notifServiceUrl}/api/notifications/send`, {
+          type: 'EMAIL',
+          message: `Confirmado: ${updated.name}`,
+          recipients: [updated.email]
+        }).catch(e => console.error(e));
+      }
+      return updated;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || 'Error confirmando');
+    }
   }
 }
