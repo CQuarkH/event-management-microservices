@@ -24,4 +24,14 @@ export class AttendeesService {
       throw new Error(error.response?.data?.error || 'Error al registrar');
     }
   }
+
+  async getAttendee(id: string) {
+    try {
+      const res = await axios.get(`${config.dbServiceUrl}/attendees/${id}`);
+      return res.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error || error.message || 'Error obteniendo asistente';
+      throw new Error(message);
+    }
+  }
 }

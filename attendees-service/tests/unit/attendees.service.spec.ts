@@ -26,4 +26,12 @@ describe('AttendeesService Unit', () => {
     expect(mockedAxios.post).toHaveBeenCalledWith(expect.stringContaining('/attendees'), expect.any(Object));
     expect(mockedAxios.post).toHaveBeenCalledWith(expect.stringContaining('/notifications/send'), expect.any(Object));
   });
+  test('getAttendee -> obtiene asistente por id', async () => {
+    const mockData = { id: '1', name: 'Seba', email: 'seba@test.com' };
+    mockedAxios.get.mockResolvedValue({ data: mockData });
+
+    const result = await service.getAttendee('1');
+    expect(result).toEqual(mockData);
+    expect(mockedAxios.get).toHaveBeenCalledWith(expect.stringContaining('/attendees/1'));
+  });
 });
