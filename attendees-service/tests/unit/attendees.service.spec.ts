@@ -49,11 +49,11 @@ describe('AttendeesService Unit', () => {
 
   test('updateAttendee -> actualiza campos del asistente', async () => {
     const updated = { id: '1', name: 'Seba Updated', email: 'seba@test.com' };
-    mockedAxios.patch.mockResolvedValue({ data: updated });
+    mockedAxios.put.mockResolvedValue({ data: updated }); // Asumiendo PUT en el servicio
 
     const result = await service.updateAttendee('1', { name: 'Seba Updated' });
     expect(result).toEqual(updated);
-    expect(mockedAxios.patch).toHaveBeenCalledWith(expect.stringContaining('/attendees/1'), expect.objectContaining({ name: 'Seba Updated' }));
+    expect(mockedAxios.put).toHaveBeenCalledWith(expect.stringContaining('/attendees/1'), expect.objectContaining({ name: 'Seba Updated' }));
   });
 
   test('cancelAttendance -> marca como unconfirmed y notifica', async () => {
