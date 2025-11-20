@@ -99,6 +99,32 @@ services:
       - "5001:5001"
     networks:
       - event-management-network
+    restart: unless-stopped
+
+  # Smoke Tests Service
+  smoke-tests:
+    build:
+      context: ./tests
+      dockerfile: Dockerfile.test
+    container_name: smoke-tests
+    depends_on:
+      - database-service
+      - attendees-service
+      - tickets-service
+      - notifications-service
+    environment:
+      # URLs de servicios (usar nombres de contenedor)
+      DATABASE_SERVICE_URL: http://database-service:3000
+      ATTENDEES_SERVICE_URL: http://attendees-service:5001
+      TICKETS_SERVICE_URL: http://tickets-service:5002
+      NOTIFICATIONS_SERVICE_URL: http://notifications-service:5003
+    networks:
+      - event-management-network
+    volumes:
+      # Montar el directorio de reports para verlos desde el host
+      - ./test-reports:/app/test-reports
+    # Este servicio se ejecuta una vez y termina
+    restart: "no"
 
 volumes:
   postgres-data:

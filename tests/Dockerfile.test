@@ -1,0 +1,27 @@
+# Dockerfile para ejecutar pruebas de humo
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instalar dependencias del sistema
+# (Ya no necesitamos curl, requests lo hace todo)
+RUN apt-get update && apt-get install -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar requirements
+COPY requirements.txt .
+
+# Instalar dependencias de Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar código de tests
+COPY smoke/ ./tests/
+
+# --- CAMBIOS AQUÍ ---
+# Copiar el nuevo script de Python
+COPY wait_for_services.py .
+
+# No hace falta chmod +x porque lo ejecutamos con python
+
+# CMD actualizado para ejecutar el script de Python
+CMD ["python", "wait_for_services.py", "pytest", "tests/smoke_tests.py", "-v", "-s", "--html=test-reports/smoke_report.html", "--self-contained-html"]
