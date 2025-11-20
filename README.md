@@ -33,6 +33,12 @@ npm run test:unit
 npm run test:integration
 ```
 
+**Ejecutar Microservicio**
+
+```
+npm run dev
+```
+
 ---
 
 ### Microservicio de Gestión de Asistentes
@@ -57,6 +63,12 @@ docker-compose up -d database-service notifications-service
 npx jest tests/smoke/smoke.spec.ts
 ```
 
+**Ejecutar Microservicio**
+
+```
+npm run dev
+```
+
 ---
 
 ### Microservicio de Gestión de Entradas
@@ -73,6 +85,12 @@ pip install -r requirements.txt
 
 ```
 python -m pytest tests/unit/ tests/integration/ --cov=src -v
+```
+
+**Ejecutar Microservicio**
+
+```
+python -m src.app
 ```
 
 ---
@@ -100,6 +118,12 @@ docker-compose up -d postgres database-service
 pytest tests/test_integration.py -v
 ```
 
+**Ejecutar Microservicio**
+
+```
+python -m src.app
+```
+
 ---
 
 ## Pruebas de Humo Generales
@@ -112,7 +136,7 @@ Para ejecutar las pruebas, es necesario ir a la raíz del repositorio y ejecutar
 docker-compose up --build
 ```
 
-Esto levantará todos los microservicios y un contenedor adicional llamado `smoke-tests`, encargado de realizar las pruebas de humo entre microservicios. Éste último ejecutará las pruebas que están dentro de `tests/smoke`. Los resultados aparecerán una vez que finalice la ejecución del servicio `smoke-tests`, generando un reporte en el directorio `tests/test-reports/smoke_report.html`
+Esto levantará y orquestará todos los microservicios más un contenedor adicional llamado `smoke-tests`, encargado de realizar las pruebas de humo entre estos. Éste último ejecutará las pruebas que están dentro de `tests/smoke`. Los resultados aparecerán una vez que finalice la ejecución del servicio `smoke-tests`, generando un reporte en el directorio `tests/test-reports/smoke_report.html`
 
 ---
 
