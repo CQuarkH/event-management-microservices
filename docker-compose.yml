@@ -65,7 +65,23 @@ services:
       - event-management-network
     restart: unless-stopped
 
-  # TODO: Tickets Service (Benja)
+  # Tickets Service (Python + Flask)
+  tickets-service:
+    build:
+      context: ./tickets-service
+      dockerfile: Dockerfile
+    container_name: tickets-service
+    depends_on:
+      - database-service
+    environment:
+      DEBUG: "False"
+      PORT: 5002
+      DATABASE_SERVICE_URL: http://database-service:3000
+    ports:
+      - "5002:5002"
+    networks:
+      - event-management-network
+    restart: unless-stopped
 
   # TODO: Attendees Service (Seba)
 

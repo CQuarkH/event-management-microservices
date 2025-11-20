@@ -39,8 +39,7 @@ class TicketsService:
 
         # Verificar disponibilidad (usar el ticket ya obtenido)
         if ticket.quantity_available < quantity:
-            raise ValueError(f"No hay suficientes entradas disponibles. Disponibles: {
-                             ticket.quantity_available}, Solicitadas: {quantity}")
+            raise ValueError(f"No hay suficientes entradas disponibles. Disponibles: {ticket.quantity_available}, Solicitadas: {quantity}")
 
         # Actualizar cantidades
         new_quantity_available = ticket.quantity_available - quantity
