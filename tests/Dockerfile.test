@@ -24,4 +24,4 @@ COPY wait_for_services.py .
 # No hace falta chmod +x porque lo ejecutamos con python
 
 # CMD actualizado para ejecutar el script de Python
-CMD ["python", "wait_for_services.py", "pytest", "tests/smoke_tests.py", "-v", "-s", "--html=tests/test-reports/smoke_report.html", "--self-contained-html"]
+CMD ["python", "wait_for_services.py", "pytest", "tests/smoke_tests.py", "-v", "-s", "--html=test-reports/smoke_report.html", "--self-contained-html"]
