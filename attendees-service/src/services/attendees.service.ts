@@ -19,11 +19,12 @@ export class AttendeesService {
         type: 'EMAIL',
         message: `Hola ${data.name}, gracias por registrarte. Por favor confirma tu asistencia.`,
         recipients: [data.email]
-      }).catch(err => console.error("Error enviando notificación:", err.message));
+      }).catch(err => console.error("Error enviando notificación de bienvenida:", err.message));
 
       return newAttendee;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Error al registrar asistente');
+      const msg = error.response?.data?.error || error.message || 'Error al registrar asistente';
+      throw new Error(msg);
     }
   }
 
@@ -42,12 +43,13 @@ export class AttendeesService {
           type: 'EMAIL',
           message: `¡Tu asistencia ha sido confirmada, ${updatedAttendee.name}!`,
           recipients: [updatedAttendee.email]
-        }).catch(err => console.error("Error enviando notificación:", err.message));
+        }).catch(err => console.error("Error enviando notificación de confirmación:", err.message));
       }
 
       return updatedAttendee;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Error confirmando asistencia');
+      const msg = error.response?.data?.error || error.message || 'Error confirmando asistencia';
+      throw new Error(msg);
     }
   }
 
@@ -56,17 +58,19 @@ export class AttendeesService {
       const res = await axios.get(`${config.dbServiceUrl}/attendees/${id}`);
       return res.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Error obteniendo asistente');
+      const msg = error.response?.data?.error || 'Error obteniendo asistente';
+      throw new Error(msg);
     }
   }
 
   // Actualizar datos de un asistente
   async updateAttendee(id: string, data: { name?: string; email?: string; phone?: string }) {
     try {
-      const dbResponse = await axios.patch(`${config.dbServiceUrl}/attendees/${id}`, data);
+      const dbResponse = await axios.put(`${config.dbServiceUrl}/attendees/${id}`, data);
       return dbResponse.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Error actualizando asistente');
+      const msg = error.response?.data?.error || 'Error actualizando asistente';
+      throw new Error(msg);
     }
   }
 
@@ -79,7 +83,6 @@ export class AttendeesService {
 
       const updatedAttendee = dbResponse.data;
 
-      // Notificar cancelación
       if (updatedAttendee.email) {
         await axios.post(`${config.notifServiceUrl}/api/notifications/send`, {
           type: 'EMAIL',
@@ -90,7 +93,8 @@ export class AttendeesService {
 
       return updatedAttendee;
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Error cancelando asistencia');
+      const msg = error.response?.data?.error || 'Error cancelando asistencia';
+      throw new Error(msg);
     }
   }
 }
