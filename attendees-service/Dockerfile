@@ -1,16 +1,28 @@
-FROM node:18-slim
-
+FROM node:18-alpine AS build
 WORKDIR /app
 
-# Install production dependencies
+# Install dependencies for build
+COPY package*.json ./
+RUN npm ci --no-audit --progress=false
+
+# Copy sources and build
+COPY tsconfig*.json ./
+COPY src ./src
+RUN npm run build
+
+FROM node:18-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Install only production deps
 COPY package*.json ./
 RUN npm ci --only=production --no-audit --progress=false
 
-# Copy application source
-COPY . .
+# Copy built artifacts from build stage
+COPY --from=build /app/dist ./dist
 
-# Expose port
 EXPOSE 5001
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 CMD wget -qO- http://localhost:5001/health || exit 1
 
-# Start the app
-CMD ["node", "dist/app.js"]
+# Run the compiled entrypoint accordingly.
+CMD ["node", "dist/src/app.js"]
