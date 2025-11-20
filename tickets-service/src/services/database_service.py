@@ -39,8 +39,7 @@ class DatabaseService:
             response.raise_for_status()
             return Ticket.from_dict(response.json())
         except requests.RequestException as e:
-            raise Exception(f"Error al actualizar entrada {
-                            ticket_id}: {str(e)}")
+            raise Exception(f"Error al actualizar entrada {ticket_id}: {str(e)}")
 
     def create_ticket(self, ticket_data: dict) -> Ticket:
         """Crear una nueva entrada"""
