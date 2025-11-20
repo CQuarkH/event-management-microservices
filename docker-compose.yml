@@ -84,6 +84,21 @@ services:
     restart: unless-stopped
 
   # TODO: Attendees Service (Seba)
+  attendees-service:
+    build:
+      context: ./attendees-service
+      dockerfile: Dockerfile
+    container_name: attendees-service
+    depends_on:
+      - database-service
+    environment:
+      PORT: 5001
+      DATABASE_SERVICE_URL: http://database-service:3000
+      NOTIFICATIONS_SERVICE_URL: http://notifications-service:5003
+    ports:
+      - "5001:5001"
+    networks:
+      - event-management-network
 
 volumes:
   postgres-data:
